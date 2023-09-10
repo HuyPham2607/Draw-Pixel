@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 
 const PixelGrid: React.FC = () => {
-  const gridSize = 100; // Thay đổi số lượng ô trong gridSize
+  const gridSize = 100;
   const pixelSize = 2;
 
   const [zoom, setZoom] = useState(1);
@@ -21,36 +21,52 @@ const PixelGrid: React.FC = () => {
   };
 
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    const delta = e.deltaY > 0 ? -0.1 : 0.1; // Điều chỉnh delta tùy theo tốc độ bạn muốn
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
     setZoom((prevZoom) => Math.max(0.1, prevZoom + delta));
+  };
+
+  const pixelGridStyle: React.CSSProperties = {
+    transform: `scale(${zoom})`,
+    transformOrigin: "center center",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "auto", // Thêm thanh cuộn khi nội dung vượt ra ngoài
   };
 
   return (
     <div
-      className="flex-grow bg-white border-dotted border-2 border-sky-500 over"
+      className="bg-white border-dotted border-2 border-sky-500"
       style={{
-        height: "90vh",
-        minHeight: "90vh",
-        transform: `scale(${zoom})`, // Điều chỉnh tỷ lệ thu phóng tại đây
-        transformOrigin: "top left", // Đặt điểm neo ở góc trên bên trái
+        width: "100%",
+        height: "100%",
+        overflow: "hidden",
       }}
-      onWheel={handleWheel}
     >
-      <div className={`grid grid-cols-${gridSize} gap-0`}>
-        {pixels.map((row, y) => (
-          <div key={y} className="flex group">
-            {row.map((color, x) => (
-              <div
-                key={x}
-                className={`w-2 h-2 ${color} grid-hover`}
-                style={{
-                  backgroundColor: color,
-                }}
-                onClick={() => handlePixelClick(x, y)}
-              ></div>
-            ))}
-          </div>
-        ))}
+      <div
+        className="pixel-grid"
+        style={{
+          ...pixelGridStyle,
+          height: "90vh",
+        }}
+        onWheel={handleWheel}
+      >
+        <div className={`grid grid-cols-${gridSize} gap-0`}>
+          {pixels.map((row, y) => (
+            <div key={y} className="flex group">
+              {row.map((color, x) => (
+                <div
+                  key={x}
+                  className={`w-2 h-2 ${color} grid-hover`}
+                  style={{
+                    backgroundColor: color,
+                  }}
+                  onClick={() => handlePixelClick(x, y)}
+                ></div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
