@@ -100,6 +100,10 @@ a {
   text-decoration: none;
 }
 
+.grid-hover:hover {
+  background-color: #00000056;
+}
+
 @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;
