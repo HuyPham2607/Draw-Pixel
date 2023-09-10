@@ -1,0 +1,17 @@
+/* styles/pixel-art.module.css */
+.pixel-grid {
+  display: grid;
+  grid-template-columns: repeat(30, 40px);
+  gap: 2px;
+}
+
+.pixel {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #ddd;
+  cursor: pointer;
+}
+
+.red {
+  color: red;
+}
