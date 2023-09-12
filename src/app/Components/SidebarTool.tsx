@@ -1,5 +1,6 @@
+"use client";
 import Image from "next/image";
-import React from "react";
+import React, { useState } from "react";
 import Eraser from "../../../public/eraser.png";
 import Pencil from "../../../public/icons8-pencil-100.png";
 import Brush from "../../../public/icons8-brush-100.png";
@@ -10,7 +11,19 @@ import Select from "../../../public/icons8-select-96.png";
 import Text from "../../../public/icons8-text-tool-64.png";
 import Line from "../../../public/icons8-line-100.png";
 
-function SidebarTool() {
+type Home = {
+  funcClickMove: (data: any) => void;
+};
+
+function SidebarTool(props: Home) {
+  const [move, setMove] = useState(false);
+
+  const HandleClickMove = () => {
+    const newMove = !move;
+    setMove(newMove);
+    props.funcClickMove(newMove);
+  };
+
   return (
     <div className=" bg-white max-w-[150px]">
       <h1 className="text-center bg-black">Tool</h1>
@@ -33,7 +46,7 @@ function SidebarTool() {
         <button className="hover:bg-zinc-200">
           <Image className="w-16 p-2" src={Circle} alt="" />
         </button>
-        <button className="hover:bg-zinc-200">
+        <button className="hover:bg-zinc-200" onClick={HandleClickMove}>
           <Image className="w-16 p-2" src={Move} alt="" />
         </button>
         <button className="hover:bg-zinc-200">
