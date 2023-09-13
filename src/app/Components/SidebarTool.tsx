@@ -13,10 +13,26 @@ import Line from "../../../public/icons8-line-100.png";
 
 type Home = {
   funcClickMove: (data: any) => void;
+  funcClickDraw: (data: any) => void;
+  funcClickEraser: (data: any) => void;
 };
 
 function SidebarTool(props: Home) {
   const [move, setMove] = useState(false);
+  const [draw, setDraw] = useState(false);
+  const [eraser, setEraser] = useState(false);
+
+  const HandleClickDraw = () => {
+    const newDraw = !draw;
+    setDraw(newDraw);
+    props.funcClickDraw(newDraw);
+  };
+
+  const HandleClickEraser = () => {
+    const newEraser = !eraser;
+    setEraser(newEraser);
+    props.funcClickEraser(newEraser);
+  };
 
   const HandleClickMove = () => {
     const newMove = !move;
@@ -28,10 +44,10 @@ function SidebarTool(props: Home) {
     <div className=" bg-white max-w-[150px]">
       <h1 className="text-center bg-black">Tool</h1>
       <div className="grid grid-cols-2">
-        <button className="hover:bg-zinc-200">
+        <button className="hover:bg-zinc-200" onClick={HandleClickDraw}>
           <Image className="w-16 p-2" src={Pencil} alt="" />
         </button>
-        <button className="hover:bg-zinc-200">
+        <button className="hover:bg-zinc-200" onClick={HandleClickEraser}>
           <Image className="w-16 p-2" src={Eraser} alt="" />
         </button>
         <button className="hover:bg-zinc-200">
