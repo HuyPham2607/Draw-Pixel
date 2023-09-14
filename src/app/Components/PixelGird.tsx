@@ -3,9 +3,11 @@
 import React, { useState } from "react";
 
 type PixelGridProps = {
-  Move: boolean; // Prop để xác định xem có cho phép di chuyển hay không.
-  Draw: boolean; // Prop để xác định xem có cho phép vẽ hay không.
-  Eraser: boolean; // Prop để xác định xem có cho phép xóa hay không.
+  Move: boolean;
+  Draw: boolean;
+  Eraser: boolean;
+  Line: boolean;
+  Brush: boolean;
 };
 
 const PixelGrid = (props: PixelGridProps) => {
@@ -37,12 +39,30 @@ const PixelGrid = (props: PixelGridProps) => {
     // Tạo một bản sao mới của mảng pixels để thay đổi.
     const newPixels = pixels.map((row) => [...row]);
 
-    if (props.Draw && !props.Eraser) {
-      // Vẽ pixel mới bằng màu hiện tại
+    if (props.Draw) {
+      // Vẽ pixel mới bằng màu hiện tại.
       newPixels[y][x] = currentColor;
-    } else if (props.Eraser && !props.Draw) {
-      // Xóa pixel bằng màu nền
+    } else if (props.Eraser) {
+      // Xóa pixel bằng màu nền.
       newPixels[y][x] = (x + y) % 2 === 0 ? "#ffff" : "#e5e7eb";
+    } else if (props.Brush) {
+      // Tô màu cho ô được chọn và các ô xung quanh theo hình dạng dấu cộng.
+      const crossOffsets = [
+        { dx: 0, dy: 0 }, // Ô được chọn.
+        { dx: -1, dy: 0 }, // Bên trái.
+        { dx: 1, dy: 0 }, // Bên phải.
+        { dx: 0, dy: -1 }, // Phía trên.
+        { dx: 0, dy: 1 }, // Phía dưới.
+      ];
+
+      for (const offset of crossOffsets) {
+        const newX = x + offset.dx;
+        const newY = y + offset.dy;
+
+        if (newX >= 0 && newX < gridSize && newY >= 0 && newY < gridSize) {
+          newPixels[newY][newX] = currentColor;
+        }
+      }
     }
 
     // Cập nhật state pixels với mảng mới đã thay đổi.
@@ -99,7 +119,7 @@ const PixelGrid = (props: PixelGridProps) => {
     y: number
   ) => {
     if (isDragging) {
-      if (props.Draw) {
+      if (props.Draw || props.Brush) {
         // Kiểm tra xem pixelX và pixelY có nằm trong phạm vi hợp lệ và vẽ pixel mới.
         if (x >= 0 && x < gridSize && y >= 0 && y < gridSize) {
           handlePixelClick(x, y);
@@ -133,7 +153,7 @@ const PixelGrid = (props: PixelGridProps) => {
   // Trả về JSX để hiển thị grid pixel và bảng màu.
   return (
     <div
-      className="bg-white border-dotted border-2 border-sky-500"
+      className="bg-white border-dotted border-2"
       style={{
         width: "100%",
         height: "100%",
