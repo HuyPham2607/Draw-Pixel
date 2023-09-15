@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState } from "react";
 
 type PixelGridProps = {
@@ -11,14 +9,11 @@ type PixelGridProps = {
 };
 
 const PixelGrid = (props: PixelGridProps) => {
-  // Định nghĩa thành phần PixelGrid và truyền vào các prop.
-  const gridSize = 50; // Kích thước của grid pixel.
-  const maxZoom = 3; // Giới hạn tối đa cho việc zoom.
+  const gridSize = 50;
+  const maxZoom = 3;
 
-  // Sử dụng useState hook để quản lý state cho grid pixel và các biến khác.
-  const [zoom, setZoom] = useState(1); // State để lưu giá trị zoom.
+  const [zoom, setZoom] = useState(1);
   const [pixels, setPixels] = useState<string[][]>(
-    // State để lưu trạng thái của grid pixel với màu sắc ban đầu.
     Array.from({ length: gridSize }, (_, y) =>
       Array.from({ length: gridSize }, (_, x) =>
         (x + y) % 2 === 0 ? "#ffff" : "#e5e7eb"
@@ -26,33 +21,50 @@ const PixelGrid = (props: PixelGridProps) => {
     )
   );
 
-  const [isDragging, setIsDragging] = useState(false); // State để theo dõi trạng thái của việc di chuyển.
-  const [startX, setStartX] = useState(0); // Vị trí x ban đầu khi di chuột.
-  const [startY, setStartY] = useState(0); // Vị trí y ban đầu khi di chuột.
-  const [scrollX, setScrollX] = useState(0); // Lưu giá trị cuộn theo trục x.
-  const [scrollY, setScrollY] = useState(0); // Lưu giá trị cuộn theo trục y.
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [startY, setStartY] = useState(0);
+  const [scrollX, setScrollX] = useState(0);
+  const [scrollY, setScrollY] = useState(0);
 
-  const [currentColor, setCurrentColor] = useState("#000000"); // Lưu giá trị màu sắc hiện tại.
+  const [isSelectingStartPoint, setIsSelectingStartPoint] = useState(false);
+  const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(
+    null
+  );
+  const [endPoint, setEndPoint] = useState<{ x: number; y: number } | null>(
+    null
+  );
 
-  // Xử lý sự kiện khi người dùng nhấp vào một pixel.
+  const [currentColor, setCurrentColor] = useState("#000000");
+
+  const [hoveredPoints, setHoveredPoints] = useState<
+    { x: number; y: number }[] | null
+  >(null);
+
+  // Thêm hàm này để đặt lại startPoint và endPoint về null.
+  const resetLine = () => {
+    setStartPoint(null);
+    setEndPoint(null);
+  };
+
+  // Thêm một biến tạm thời để lưu trạng thái vẽ đường thẳng.
+  const [isDrawingLine, setIsDrawingLine] = useState(false);
+
+  // Trong hàm handlePixelClick:
   const handlePixelClick = (x: number, y: number) => {
-    // Tạo một bản sao mới của mảng pixels để thay đổi.
     const newPixels = pixels.map((row) => [...row]);
 
     if (props.Draw) {
-      // Vẽ pixel mới bằng màu hiện tại.
       newPixels[y][x] = currentColor;
     } else if (props.Eraser) {
-      // Xóa pixel bằng màu nền.
       newPixels[y][x] = (x + y) % 2 === 0 ? "#ffff" : "#e5e7eb";
     } else if (props.Brush) {
-      // Tô màu cho ô được chọn và các ô xung quanh theo hình dạng dấu cộng.
       const crossOffsets = [
-        { dx: 0, dy: 0 }, // Ô được chọn.
-        { dx: -1, dy: 0 }, // Bên trái.
-        { dx: 1, dy: 0 }, // Bên phải.
-        { dx: 0, dy: -1 }, // Phía trên.
-        { dx: 0, dy: 1 }, // Phía dưới.
+        { dx: 0, dy: 0 },
+        { dx: -1, dy: 0 },
+        { dx: 1, dy: 0 },
+        { dx: 0, dy: -1 },
+        { dx: 0, dy: 1 },
       ];
 
       for (const offset of crossOffsets) {
@@ -63,24 +75,112 @@ const PixelGrid = (props: PixelGridProps) => {
           newPixels[newY][newX] = currentColor;
         }
       }
+    } else if (props.Line) {
+      if (startPoint === null) {
+        setStartPoint({ x, y });
+        setEndPoint(null);
+        const newPixels = pixels.map((row) => [...row]);
+        newPixels[y][x] = "blue";
+        setPixels(newPixels);
+        if (hoveredPoints) {
+          hoveredPoints.forEach(({ x, y }) => {
+            newPixels[y][x] = (x + y) % 2 === 0 ? "#ffff" : "#e5e7eb";
+          });
+          setHoveredPoints(null);
+        }
+      } else if (endPoint === null) {
+        setEndPoint({ x, y });
+        const newPixels = pixels.map((row) => [...row]);
+        drawLine(startPoint.x, startPoint.y, x, y, newPixels);
+        setPixels(newPixels);
+        resetLine();
+        if (hoveredPoints) {
+          hoveredPoints.forEach(({ x, y }) => {
+            newPixels[y][x] = (x + y) % 2 === 0 ? "#ffff" : "#e5e7eb";
+          });
+          setHoveredPoints(null);
+        }
+      } else {
+        // Thêm một đoạn thẳng thứ hai mà không xóa điểm thẳng thứ nhất.
+        const newPixels = pixels.map((row) => [...row]);
+        drawLine(startPoint.x, startPoint.y, x, y, newPixels);
+        setPixels(newPixels);
+        resetLine();
+      }
     }
 
-    // Cập nhật state pixels với mảng mới đã thay đổi.
     setPixels(newPixels);
   };
 
-  // Xử lý sự kiện cuộn chuột để thay đổi zoom.
+  const handlePixelHover = (x: number, y: number) => {
+    if (startPoint !== null && endPoint === null) {
+      const newPixels = pixels.map((row) => [...row]);
+
+      if (hoveredPoints) {
+        hoveredPoints.forEach(({ x, y }) => {
+          newPixels[y][x] = (x + y) % 2 === 0 ? "#ffff" : "#e5e7eb";
+        });
+      }
+
+      const pointsOnLine = getPointsOnLine(startPoint.x, startPoint.y, x, y);
+      pointsOnLine.forEach(({ x, y }) => {
+        newPixels[y][x] = "green";
+      });
+
+      setPixels(newPixels);
+      setHoveredPoints(pointsOnLine);
+    }
+  };
+
+  const drawLine = (
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    pixelsArray: string[][],
+    color: string = currentColor
+  ) => {
+    const pointsOnLine = getPointsOnLine(x1, y1, x2, y2);
+    pointsOnLine.forEach(({ x, y }) => {
+      if (x >= 0 && x < gridSize && y >= 0 && y < gridSize) {
+        pixelsArray[y][x] = color;
+      }
+    });
+  };
+
+  const getPointsOnLine = (x1: number, y1: number, x2: number, y2: number) => {
+    const points: { x: number; y: number }[] = [];
+    const dx = Math.abs(x2 - x1);
+    const dy = Math.abs(y2 - y1);
+    const sx = x1 < x2 ? 1 : -1;
+    const sy = y1 < y2 ? 1 : -1;
+    let err = dx - dy;
+    let currentX = x1;
+    let currentY = y1;
+
+    while (currentX !== x2 || currentY !== y2) {
+      points.push({ x: currentX, y: currentY });
+      const e2 = 2 * err;
+      if (e2 > -dy) {
+        err -= dy;
+        currentX += sx;
+      }
+      if (e2 < dx) {
+        err += dx;
+        currentY += sy;
+      }
+    }
+    return points;
+  };
+
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
     const newZoom = zoom + delta;
-
-    // Kiểm tra giới hạn zoom.
     if (newZoom >= 1 && newZoom <= maxZoom) {
       setZoom(newZoom);
     }
   };
 
-  // Xử lý sự kiện khi người dùng nhấp chuột để di chuyển.
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button === 0) {
       setIsDragging(true);
@@ -89,30 +189,23 @@ const PixelGrid = (props: PixelGridProps) => {
     }
   };
 
-  // Xử lý sự kiện khi người dùng di chuyển chuột.
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (props.Move) {
       if (isDragging) {
         const deltaX = e.clientX - startX;
         const deltaY = e.clientY - startY;
-
-        // Áp dụng sự chênh lệch vào vị trí hiển thị của bức tranh.
         setScrollX(scrollX + deltaX);
         setScrollY(scrollY + deltaY);
-
-        // Lưu vị trí hiện tại của chuột.
         setStartX(e.clientX);
         setStartY(e.clientY);
       }
     }
   };
 
-  // Xử lý sự kiện khi người dùng thả chuột.
   const handleMouseUp = () => {
     setIsDragging(false);
   };
 
-  // Xử lý sự kiện khi người dùng di chuyển pixel để vẽ hoặc xóa.
   const handlePixelDrag = (
     e: React.MouseEvent<HTMLDivElement>,
     x: number,
@@ -120,12 +213,10 @@ const PixelGrid = (props: PixelGridProps) => {
   ) => {
     if (isDragging) {
       if (props.Draw || props.Brush) {
-        // Kiểm tra xem pixelX và pixelY có nằm trong phạm vi hợp lệ và vẽ pixel mới.
         if (x >= 0 && x < gridSize && y >= 0 && y < gridSize) {
           handlePixelClick(x, y);
         }
       } else if (props.Eraser) {
-        // Kiểm tra xem pixelX và pixelY có nằm trong phạm vi hợp lệ và xóa pixel.
         if (x >= 0 && x < gridSize && y >= 0 && y < gridSize) {
           const newPixels = [...pixels];
           newPixels[y][x] = (x + y) % 2 === 0 ? "#ffff" : "#e5e7eb";
@@ -135,12 +226,10 @@ const PixelGrid = (props: PixelGridProps) => {
     }
   };
 
-  // Xử lý sự kiện khi người dùng thay đổi màu sắc.
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCurrentColor(e.target.value);
   };
 
-  // Định dạng và kiểu dáng của grid pixel dựa trên giá trị zoom và di chuyển.
   const pixelGridStyle: React.CSSProperties = {
     transform: `scale(${zoom}) translate(${scrollX}px, ${scrollY}px)`,
     transformOrigin: "center center",
@@ -150,7 +239,6 @@ const PixelGrid = (props: PixelGridProps) => {
     overflow: "auto",
   };
 
-  // Trả về JSX để hiển thị grid pixel và bảng màu.
   return (
     <div
       className="bg-white border-dotted border-2"
@@ -174,17 +262,24 @@ const PixelGrid = (props: PixelGridProps) => {
         <div className={`grid grid-cols-${gridSize} gap-0`}>
           {pixels.map((row, y) => (
             <div key={y} className="flex group">
-              {row.map((color, x) => (
-                <div
-                  key={x}
-                  className={`w-4 h-4 ${color} grid-hover`}
-                  style={{
-                    backgroundColor: color,
-                  }}
-                  onClick={() => handlePixelClick(x, y)}
-                  onMouseMove={(e) => handlePixelDrag(e, x, y)}
-                ></div>
-              ))}
+              {row.map((color, x) => {
+                const isHovered =
+                  hoveredPoints &&
+                  hoveredPoints.some((point) => point.x === x && point.y === y);
+
+                return (
+                  <div
+                    key={x}
+                    className={`w-4 h-4 ${isHovered ? "green" : ""} grid-hover`}
+                    style={{
+                      backgroundColor: isHovered ? "green" : color,
+                    }}
+                    onClick={() => handlePixelClick(x, y)}
+                    onMouseMove={(e) => handlePixelDrag(e, x, y)}
+                    onMouseEnter={() => handlePixelHover(x, y)}
+                  ></div>
+                );
+              })}
             </div>
           ))}
         </div>
