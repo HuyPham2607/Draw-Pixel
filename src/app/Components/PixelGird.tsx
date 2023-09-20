@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+"use client";
+import React, { useEffect, useState } from "react";
 
 type PixelGridProps = {
   Move: boolean;
@@ -6,13 +7,26 @@ type PixelGridProps = {
   Eraser: boolean;
   Line: boolean;
   Brush: boolean;
+  funcGetDataPixel: (data: any) => void;
+  funcGetDataZoom: (data: any) => void;
+  funcGetScrollX: (data: any) => void;
+  funcGetScrollY: (data: any) => void;
 };
 
-const PixelGrid = (props: PixelGridProps) => {
+const PixelGrid: React.FC<PixelGridProps> = (props) => {
   const gridSize = 50;
   const maxZoom = 3;
 
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState<number>(1);
+
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [isHovered, setIsHovered] = useState<boolean>(false);
+
+  const [startX, setStartX] = useState<number>(0);
+  const [startY, setStartY] = useState<number>(0);
+  const [scrollX, setScrollX] = useState<number>(0);
+  const [scrollY, setScrollY] = useState<number>(0);
+
   const [pixels, setPixels] = useState<string[][]>(
     Array.from({ length: gridSize }, (_, y) =>
       Array.from({ length: gridSize }, (_, x) =>
@@ -21,36 +35,23 @@ const PixelGrid = (props: PixelGridProps) => {
     )
   );
 
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [startY, setStartY] = useState(0);
-  const [scrollX, setScrollX] = useState(0);
-  const [scrollY, setScrollY] = useState(0);
+  useEffect(() => {
+    props.funcGetDataPixel(pixels);
+    props.funcGetDataZoom(zoom);
+    props.funcGetScrollX(scrollX);
+    props.funcGetScrollY(scrollY);
+  }, [pixels, zoom, scrollX, scrollY]);
 
-  const [isSelectingStartPoint, setIsSelectingStartPoint] = useState(false);
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(
     null
   );
+
   const [endPoint, setEndPoint] = useState<{ x: number; y: number } | null>(
     null
   );
 
-  const [currentColor, setCurrentColor] = useState("#000000");
+  const [currentColor, setCurrentColor] = useState<string>("#000000");
 
-  const [hoveredPoints, setHoveredPoints] = useState<
-    { x: number; y: number }[] | null
-  >(null);
-
-  // Thêm hàm này để đặt lại startPoint và endPoint về null.
-  const resetLine = () => {
-    setStartPoint(null);
-    setEndPoint(null);
-  };
-
-  // Thêm một biến tạm thời để lưu trạng thái vẽ đường thẳng.
-  const [isDrawingLine, setIsDrawingLine] = useState(false);
-
-  // Trong hàm handlePixelClick:
   const handlePixelClick = (x: number, y: number) => {
     const newPixels = pixels.map((row) => [...row]);
 
@@ -75,117 +76,87 @@ const PixelGrid = (props: PixelGridProps) => {
           newPixels[newY][newX] = currentColor;
         }
       }
-    } else if (props.Line) {
-      if (startPoint === null) {
-        setStartPoint({ x, y });
-        setEndPoint(null);
-        const newPixels = pixels.map((row) => [...row]);
-        newPixels[y][x] = "blue";
-        setPixels(newPixels);
-        if (hoveredPoints) {
-          hoveredPoints.forEach(({ x, y }) => {
-            newPixels[y][x] = (x + y) % 2 === 0 ? "#ffff" : "#e5e7eb";
-          });
-          setHoveredPoints(null);
-        }
-      } else if (endPoint === null) {
-        setEndPoint({ x, y });
-        const newPixels = pixels.map((row) => [...row]);
-        drawLine(startPoint.x, startPoint.y, x, y, newPixels);
-        setPixels(newPixels);
-        resetLine();
-        if (hoveredPoints) {
-          hoveredPoints.forEach(({ x, y }) => {
-            newPixels[y][x] = (x + y) % 2 === 0 ? "#ffff" : "#e5e7eb";
-          });
-          setHoveredPoints(null);
-        }
-      } else {
-        // Thêm một đoạn thẳng thứ hai mà không xóa điểm thẳng thứ nhất.
-        const newPixels = pixels.map((row) => [...row]);
-        drawLine(startPoint.x, startPoint.y, x, y, newPixels);
-        setPixels(newPixels);
-        resetLine();
-      }
     }
 
     setPixels(newPixels);
   };
 
-  const handlePixelHover = (x: number, y: number) => {
-    if (startPoint !== null && endPoint === null) {
-      const newPixels = pixels.map((row) => [...row]);
-
-      if (hoveredPoints) {
-        hoveredPoints.forEach(({ x, y }) => {
-          newPixels[y][x] = (x + y) % 2 === 0 ? "#ffff" : "#e5e7eb";
-        });
-      }
-
-      const pointsOnLine = getPointsOnLine(startPoint.x, startPoint.y, x, y);
-      pointsOnLine.forEach(({ x, y }) => {
-        newPixels[y][x] = "green";
-      });
-
-      setPixels(newPixels);
-      setHoveredPoints(pointsOnLine);
-    }
-  };
-
   const drawLine = (
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number,
     pixelsArray: string[][],
-    color: string = currentColor
+    x1: number | null,
+    y1: number | null,
+    x2: number | null,
+    y2: number | null,
+    color: string
   ) => {
-    const pointsOnLine = getPointsOnLine(x1, y1, x2, y2);
-    pointsOnLine.forEach(({ x, y }) => {
-      if (x >= 0 && x < gridSize && y >= 0 && y < gridSize) {
-        pixelsArray[y][x] = color;
-      }
-    });
-  };
+    if (x1 === null || y1 === null || x2 === null || y2 === null) {
+      return;
+    }
 
-  const getPointsOnLine = (x1: number, y1: number, x2: number, y2: number) => {
-    const points: { x: number; y: number }[] = [];
     const dx = Math.abs(x2 - x1);
     const dy = Math.abs(y2 - y1);
     const sx = x1 < x2 ? 1 : -1;
     const sy = y1 < y2 ? 1 : -1;
     let err = dx - dy;
-    let currentX = x1;
-    let currentY = y1;
 
-    while (currentX !== x2 || currentY !== y2) {
-      points.push({ x: currentX, y: currentY });
+    while (true) {
+      pixelsArray[y1][x1] = color;
+
+      if (x1 === x2 && y1 === y2) {
+        break;
+      }
+
       const e2 = 2 * err;
       if (e2 > -dy) {
         err -= dy;
-        currentX += sx;
+        x1 += sx;
       }
       if (e2 < dx) {
         err += dx;
-        currentY += sy;
+        y1 += sy;
       }
     }
-    return points;
   };
+
+  const handleDrawLineStart = (
+    e: React.MouseEvent<HTMLDivElement>,
+    x: number,
+    y: number
+  ) => {
+    if (props.Line) {
+      if (startPoint === null) {
+        setIsHovered(true);
+        setStartPoint({ x, y });
+        setEndPoint(null);
+      }
+    }
+  };
+
+  const handleDrawLineEnd = (
+    e: React.MouseEvent<HTMLDivElement>,
+    x: number,
+    y: number
+  ) => {
+    const newPixels = pixels.map((row) => [...row]);
+    if (startPoint !== null && endPoint === null) {
+      drawLine(newPixels, startPoint.x, startPoint.y, x, y, currentColor);
+    }
+    setPixels(newPixels);
+    setStartPoint(null);
+  };
+
+  function calculateLine(startPoint: any, endPoint: any) {
+    if (props.Line && isDragging) {
+      console.log(startPoint, endPoint);
+      console.log(isHovered);
+    }
+  }
 
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
     const newZoom = zoom + delta;
     if (newZoom >= 1 && newZoom <= maxZoom) {
       setZoom(newZoom);
-    }
-  };
-
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.button === 0) {
-      setIsDragging(true);
-      setStartX(e.clientX);
-      setStartY(e.clientY);
     }
   };
 
@@ -199,6 +170,14 @@ const PixelGrid = (props: PixelGridProps) => {
         setStartX(e.clientX);
         setStartY(e.clientY);
       }
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button === 0) {
+      setIsDragging(true);
+      setStartX(e.clientX);
+      setStartY(e.clientY);
     }
   };
 
@@ -262,24 +241,20 @@ const PixelGrid = (props: PixelGridProps) => {
         <div className={`grid grid-cols-${gridSize} gap-0`}>
           {pixels.map((row, y) => (
             <div key={y} className="flex group">
-              {row.map((color, x) => {
-                const isHovered =
-                  hoveredPoints &&
-                  hoveredPoints.some((point) => point.x === x && point.y === y);
-
-                return (
-                  <div
-                    key={x}
-                    className={`w-4 h-4 ${isHovered ? "green" : ""} grid-hover`}
-                    style={{
-                      backgroundColor: isHovered ? "green" : color,
-                    }}
-                    onClick={() => handlePixelClick(x, y)}
-                    onMouseMove={(e) => handlePixelDrag(e, x, y)}
-                    onMouseEnter={() => handlePixelHover(x, y)}
-                  ></div>
-                );
-              })}
+              {row.map((color, x) => (
+                <div
+                  key={x}
+                  className={`w-4 h-4 ${color} grid-hover`}
+                  style={{
+                    backgroundColor: color,
+                  }}
+                  onClick={() => handlePixelClick(x, y)}
+                  onMouseMove={(e) => handlePixelDrag(e, x, y)}
+                  onMouseDown={(e) => handleDrawLineStart(e, x, y)}
+                  onMouseUp={(e) => handleDrawLineEnd(e, x, y)}
+                  onMouseEnter={() => calculateLine(x, y)}
+                ></div>
+              ))}
             </div>
           ))}
         </div>
