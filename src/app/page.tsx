@@ -5,6 +5,10 @@ import PixelGird from "./Components/PixelGird";
 import SidebarTool from "./Components/SidebarTool";
 
 export default function Home() {
+  const [pixels, setPixels] = useState<string[][]>();
+  const [zoom, setZoom] = useState<number>();
+  const [scrollX, setScrollX] = useState<number>(0);
+  const [scrollY, setScrollY] = useState<number>(0);
   const [move, setMove] = useState(false);
   const [draw, setDraw] = useState(false);
   const [eraser, setEraser] = useState(false);
@@ -42,6 +46,21 @@ export default function Home() {
   const HandleClickText = (data: boolean) => {
     setText(data);
   };
+  // Handle for GridPixel
+  const HandleGetDataPixel = (data: any) => {
+    setPixels(data);
+  };
+
+  const HandleGetDataZoom = (data: any) => {
+    setZoom(data);
+  };
+
+  const HandleGetDataScroolX = (data: any) => {
+    setScrollX(data);
+  };
+  const HandleGetDataScroolY = (data: any) => {
+    setScrollY(data);
+  };
 
   return (
     <div className="flex h-full">
@@ -62,8 +81,17 @@ export default function Home() {
         Eraser={eraser}
         Line={line}
         Brush={brush}
+        funcGetDataPixel={HandleGetDataPixel}
+        funcGetDataZoom={HandleGetDataZoom}
+        funcGetScrollX={HandleGetDataScroolX}
+        funcGetScrollY={HandleGetDataScroolY}
       />
-      <Navigation />
+      <Navigation
+        dataPixel={pixels}
+        dataZoom={zoom}
+        dataScrollX={scrollX}
+        dataScrollY={scrollY}
+      />
     </div>
   );
 }
